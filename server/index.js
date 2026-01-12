@@ -43,10 +43,7 @@ const upload = multer({ storage })
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/garage-config'
 
 mongoose
-  .connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => {
     console.log('⚠️  MongoDB connection failed, using in-memory fallback:', err.message)
