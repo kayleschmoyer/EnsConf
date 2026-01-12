@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Check, Building2, Camera, FileCode } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Building2, Camera, FileCode, Trash2, Move } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,6 +36,8 @@ export default function NewGaragePage() {
   })
   const [items, setItems] = useState([])
   const [selectedItem, setSelectedItem] = useState(null)
+  const [selectedLevel, setSelectedLevel] = useState(0)
+  const [placementMode, setPlacementMode] = useState(false)
   const [itemForm, setItemForm] = useState({
     type: 'camera',
     ip: '',
@@ -49,25 +51,122 @@ export default function NewGaragePage() {
     { num: 3, title: 'Review & Save', icon: FileCode },
   ]
 
-  const handleAddItem = () => {
+  // Optimized handlers with useCallback to prevent unnecessary re-renders
+  const handleAddItem = useCallback(() => {
+    if (placementMode) {
+      toast({
+        title: 'Click on floor',
+        description: 'Click anywhere on the selected level to place the item',
+      })
+      return
+    }
+
+    // Place at center of selected level
+    const levelY = selectedLevel * 3
     const newItem = {
       id: Date.now().toString(),
       type: itemForm.type,
       ip: itemForm.ip,
       direction: itemForm.direction,
-      position: [
-        Math.random() * 10 - 5,
-        Math.random() * garageData.levels * 3,
-        Math.random() * 10 - 5,
-      ],
-      rotation: [0, Math.random() * Math.PI * 2, 0],
+      position: [0, levelY + 0.5, 0],
+      rotation: [0, 0, 0],
+      level: selectedLevel,
     }
-    setItems([...items, newItem])
+
+    setItems(prev => [...prev, newItem])
+    setSelectedItem(newItem)
     toast({
       title: 'Item Added',
-      description: `${itemForm.type === 'camera' ? 'Camera' : 'Sensor'} added to garage`,
+      description: `${itemForm.type === 'camera' ? 'Camera' : 'Sensor'} added to level ${selectedLevel + 1}`,
     })
-  }
+  }, [itemForm, selectedLevel, placementMode, toast])
+
+  const handleFloorClick = useCallback((position) => {
+    if (!placementMode) return
+
+    const levelY = selectedLevel * 3
+    const newItem = {
+      id: Date.now().toString(),
+      type: itemForm.type,
+      ip: itemForm.ip,
+      direction: itemForm.direction,
+      position: [position[0], levelY + 0.5, position[2]],
+      rotation: [0, 0, 0],
+      level: selectedLevel,
+    }
+
+    setItems(prev => [...prev, newItem])
+    setSelectedItem(newItem)
+    setPlacementMode(false)
+    toast({
+      title: 'Item Placed',
+      description: `${itemForm.type === 'camera' ? 'Camera' : 'Sensor'} placed at (${position[0].toFixed(1)}, ${position[2].toFixed(1)})`,
+    })
+  }, [itemForm, selectedLevel, placementMode, toast])
+
+  const handleItemDrag = useCallback((itemId, newPosition) => {
+    setItems(prev => prev.map(item =>
+      item.id === itemId
+        ? { ...item, position: newPosition }
+        : item
+    ))
+  }, [])
+
+  const handleDeleteItem = useCallback(() => {
+    if (!selectedItem) return
+
+    setItems(prev => prev.filter(item => item.id !== selectedItem.id))
+    toast({
+      title: 'Item Deleted',
+      description: `${selectedItem.type === 'camera' ? 'Camera' : 'Sensor'} removed`,
+    })
+    setSelectedItem(null)
+  }, [selectedItem, toast])
+
+  const handleUpdatePosition = useCallback((axis, value) => {
+    if (!selectedItem) return
+
+    setItems(prev => prev.map(item => {
+      if (item.id === selectedItem.id) {
+        const newPosition = [...item.position]
+        const axisIndex = { x: 0, y: 1, z: 2 }[axis]
+        newPosition[axisIndex] = parseFloat(value) || 0
+        return { ...item, position: newPosition }
+      }
+      return item
+    }))
+
+    setSelectedItem(prev => {
+      if (!prev) return prev
+      const newPosition = [...prev.position]
+      const axisIndex = { x: 0, y: 1, z: 2 }[axis]
+      newPosition[axisIndex] = parseFloat(value) || 0
+      return { ...prev, position: newPosition }
+    })
+  }, [selectedItem])
+
+  const handleUpdateRotation = useCallback((value) => {
+    if (!selectedItem) return
+
+    const radians = (parseFloat(value) || 0) * (Math.PI / 180)
+    setItems(prev => prev.map(item => {
+      if (item.id === selectedItem.id) {
+        return { ...item, rotation: [0, radians, 0] }
+      }
+      return item
+    }))
+
+    setSelectedItem(prev => {
+      if (!prev) return prev
+      return { ...prev, rotation: [0, radians, 0] }
+    })
+  }, [selectedItem])
+
+  // Memoize camera and sensor counts to prevent recalculation
+  const itemCounts = useMemo(() => ({
+    cameras: items.filter(i => i.type === 'camera').length,
+    sensors: items.filter(i => i.type === 'sensor').length,
+  }), [items])
 
   const handleSave = async () => {
     try {
@@ -261,14 +360,36 @@ export default function NewGaragePage() {
             className="grid lg:grid-cols-3 gap-6"
           >
             {/* 3D Scene */}
-            <div className="lg:col-span-2 h-[600px]">
+            <div className="lg:col-span-2 h-[700px]">
               <Card className="h-full p-4">
+                {/* Level Selector */}
+                <div className="mb-3 flex items-center gap-2 flex-wrap">
+                  <Label className="text-sm font-semibold">Select Level:</Label>
+                  {Array.from({ length: garageData.levels }).map((_, idx) => (
+                    <Button
+                      key={idx}
+                      size="sm"
+                      variant={selectedLevel === idx ? 'neon' : 'outline'}
+                      onClick={() => setSelectedLevel(idx)}
+                      className="h-8 px-3"
+                    >
+                      Level {idx + 1}
+                    </Button>
+                  ))}
+                </div>
+
                 <GarageScene
                   levels={garageData.levels}
                   spotsPerLevel={garageData.spotsPerLevel}
                   items={items}
+                  entrances={garageData.entrances}
+                  exits={garageData.exits}
+                  selectedLevel={selectedLevel}
                   onItemClick={setSelectedItem}
                   selectedItem={selectedItem}
+                  onItemDrag={handleItemDrag}
+                  onFloorClick={handleFloorClick}
+                  placementMode={placementMode}
                 />
               </Card>
             </div>
@@ -325,18 +446,90 @@ export default function NewGaragePage() {
                     </>
                   )}
 
-                  <Button variant="neon" onClick={handleAddItem} className="w-full">
-                    Add to Scene
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={placementMode ? 'neon' : 'outline'}
+                      onClick={() => setPlacementMode(!placementMode)}
+                      className="flex-1"
+                    >
+                      <Move className="w-4 h-4 mr-2" />
+                      {placementMode ? 'Placing...' : 'Click to Place'}
+                    </Button>
+                    <Button variant="neon" onClick={handleAddItem} className="flex-1">
+                      Add at Center
+                    </Button>
+                  </div>
                 </div>
               </Card>
+
+              {selectedItem && (
+                <Card className="p-6 border-2 border-neon-blue">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">
+                      {selectedItem.type === 'camera' ? 'Camera' : 'Sensor'} Settings
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleDeleteItem}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Position X</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={selectedItem.position[0].toFixed(2)}
+                        onChange={(e) => handleUpdatePosition('x', e.target.value)}
+                        className="mt-1 h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Position Y (Height)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={selectedItem.position[1].toFixed(2)}
+                        onChange={(e) => handleUpdatePosition('y', e.target.value)}
+                        className="mt-1 h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Position Z</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={selectedItem.position[2].toFixed(2)}
+                        onChange={(e) => handleUpdatePosition('z', e.target.value)}
+                        className="mt-1 h-8"
+                      />
+                    </div>
+                    {selectedItem.type === 'camera' && (
+                      <div>
+                        <Label className="text-xs">Rotation (degrees)</Label>
+                        <Input
+                          type="number"
+                          step="5"
+                          value={Math.round(selectedItem.rotation[1] * (180 / Math.PI))}
+                          onChange={(e) => handleUpdateRotation(e.target.value)}
+                          className="mt-1 h-8"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
 
               <Card className="p-6">
                 <h3 className="text-lg font-bold mb-2">Items Added</h3>
                 <p className="text-sm text-gray-400">
-                  Cameras: {items.filter((i) => i.type === 'camera').length}
+                  Cameras: {itemCounts.cameras}
                   <br />
-                  Sensors: {items.filter((i) => i.type === 'sensor').length}
+                  Sensors: {itemCounts.sensors}
                 </p>
               </Card>
             </div>
