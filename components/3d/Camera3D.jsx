@@ -10,6 +10,18 @@ const Camera3D = memo(function Camera3D({ item, position, rotation, onClick, isS
   const [hovered, setHovered] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
+  // Get camera direction
+  const direction = item.direction || 'overview'
+
+  // Define colors based on direction
+  const directionColors = {
+    inbound: { base: '#22c55e', emissive: '#16a34a' }, // Green for inbound
+    outbound: { base: '#ef4444', emissive: '#dc2626' }, // Red for outbound
+    overview: { base: '#3b82f6', emissive: '#2563eb' }, // Blue for overview
+  }
+
+  const colors = directionColors[direction] || directionColors.overview
+
   // Only animate when selected - significant performance improvement
   useFrame((state) => {
     if (meshRef.current && isSelected && !isDragging) {
@@ -71,11 +83,21 @@ const Camera3D = memo(function Camera3D({ item, position, rotation, onClick, isS
         >
           <coneGeometry args={[0.35, 0.9, 8]} />
           <meshStandardMaterial
-            color={isSelected ? '#ff3366' : hovered ? '#00d4ff' : '#2c3e50'}
-            emissive={isSelected ? '#ff3366' : '#00d4ff'}
+            color={isSelected ? '#ff3366' : hovered ? colors.base : '#2c3e50'}
+            emissive={isSelected ? '#ff3366' : colors.emissive}
             emissiveIntensity={isSelected ? 0.9 : hovered ? 0.7 : 0.4}
             metalness={0.9}
             roughness={0.15}
+          />
+        </mesh>
+
+        {/* Direction indicator light */}
+        <mesh position={[0, 0.5, 0.3]}>
+          <sphereGeometry args={[0.08, 8, 8]} />
+          <meshBasicMaterial
+            color={colors.base}
+            opacity={0.9}
+            transparent
           />
         </mesh>
 
@@ -96,7 +118,7 @@ const Camera3D = memo(function Camera3D({ item, position, rotation, onClick, isS
           <mesh position={[0, 0, -2]} rotation={[Math.PI / 2, 0, 0]}>
             <coneGeometry args={[2, 4, 8, 1, true]} />
             <meshBasicMaterial
-              color={isSelected ? '#ff3366' : '#00d4ff'}
+              color={isSelected ? '#ff3366' : colors.base}
               opacity={isSelected ? 0.25 : 0.15}
               transparent
               side={THREE.DoubleSide}

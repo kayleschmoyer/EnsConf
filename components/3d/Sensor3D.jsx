@@ -10,6 +10,18 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
   const [hovered, setHovered] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
+  // Get sensor type from item data
+  const sensorType = item.type || 'normal'
+
+  // Define colors based on sensor type
+  const sensorColors = {
+    EV: { base: '#22c55e', emissive: '#16a34a', icon: '⚡' }, // Green for EV
+    handicap: { base: '#3b82f6', emissive: '#2563eb', icon: '♿' }, // Blue for handicap
+    normal: { base: '#7b2cbf', emissive: '#6a1b9a', icon: 'P' }, // Purple for normal
+  }
+
+  const colors = sensorColors[sensorType] || sensorColors.normal
+
   // Only animate when selected or hovered - significant performance improvement
   useFrame((state) => {
     if (meshRef.current && !isDragging) {
@@ -80,8 +92,8 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
         >
           <sphereGeometry args={[0.35, 20, 20]} />
           <meshStandardMaterial
-            color={isSelected ? '#00ff88' : hovered ? '#7b2cbf' : '#34495e'}
-            emissive={isSelected ? '#00ff88' : '#7b2cbf'}
+            color={isSelected ? '#00ff88' : hovered ? colors.base : '#34495e'}
+            emissive={isSelected ? '#00ff88' : colors.emissive}
             emissiveIntensity={isSelected ? 0.9 : hovered ? 0.7 : 0.4}
             metalness={0.95}
             roughness={0.1}
@@ -92,7 +104,7 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
         <mesh>
           <sphereGeometry args={[0.15, 16, 16]} />
           <meshBasicMaterial
-            color={isSelected ? '#00ff88' : '#7b2cbf'}
+            color={isSelected ? '#00ff88' : colors.base}
             opacity={0.9}
             transparent
           />
@@ -104,12 +116,22 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
             <mesh key={idx} rotation={[Math.PI / 2, 0, 0]}>
               <ringGeometry args={[scale * 0.3, scale * 0.35, 32]} />
               <meshBasicMaterial
-                color={isSelected ? '#00ff88' : '#7b2cbf'}
+                color={isSelected ? '#00ff88' : colors.base}
                 opacity={0.4 - idx * 0.1}
                 transparent
               />
             </mesh>
           ))}
+
+        {/* Type indicator label */}
+        <mesh position={[0, 0.7, 0]}>
+          <sphereGeometry args={[0.2, 16, 16]} />
+          <meshStandardMaterial
+            color={colors.base}
+            emissive={colors.emissive}
+            emissiveIntensity={0.8}
+          />
+        </mesh>
 
         {/* Selection Indicator */}
         {isSelected && (

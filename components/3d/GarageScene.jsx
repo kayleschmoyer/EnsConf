@@ -8,14 +8,11 @@ import Camera3D from './Camera3D'
 import Sensor3D from './Sensor3D'
 import FloorLevel from './FloorLevel'
 import EntranceExit from './EntranceExit'
+import Ramp3D from './Ramp3D'
 
 // Memoized scene component for better performance
 const GarageScene = memo(function GarageScene({
-  levels,
-  spotsPerLevel,
-  items,
-  entrances = 1,
-  exits = 1,
+  levelsData = [], // New per-level data structure
   selectedLevel = 0,
   onItemClick,
   selectedItem,
@@ -23,6 +20,15 @@ const GarageScene = memo(function GarageScene({
   onFloorClick,
   placementMode = false,
 }) {
+  // Get current level data
+  const currentLevelData = levelsData[selectedLevel] || {
+    cameras: [],
+    sensors: [],
+    entrances: [],
+    exits: [],
+    ramps: [],
+    spotsPerLevel: 50,
+  }
   return (
     <div className="w-full h-full bg-gradient-to-b from-gray-900 to-black rounded-lg overflow-hidden">
       <Canvas shadows dpr={[1, 2]}>
@@ -62,11 +68,11 @@ const GarageScene = memo(function GarageScene({
         <Environment preset="night" />
 
         {/* Garage Floors with highlighting for selected level */}
-        {Array.from({ length: levels }).map((_, idx) => (
+        {levelsData.map((levelData, idx) => (
           <FloorLevel
             key={idx}
             level={idx}
-            spotsPerLevel={spotsPerLevel}
+            spotsPerLevel={levelData.spotsPerLevel || 50}
             yPosition={idx * 3}
             isSelected={selectedLevel === idx}
             onFloorClick={onFloorClick}
@@ -74,21 +80,27 @@ const GarageScene = memo(function GarageScene({
           />
         ))}
 
-        {/* Entrances and Exits */}
-        {Array.from({ length: entrances }).map((_, idx) => (
+        {/* Entrances for current level */}
+        {currentLevelData.entrances?.map((entrance, idx) => (
           <EntranceExit
-            key={`entrance-${idx}`}
+            key={`entrance-${entrance.id || idx}`}
             type="entrance"
-            position={[-Math.ceil(Math.sqrt(spotsPerLevel)) * 1.25, 0.5, idx * 3 - 3]}
+            position={entrance.position || [-10, selectedLevel * 3 + 0.5, 0]}
             rotation={[0, Math.PI / 2, 0]}
+            onClick={() => onItemClick({ ...entrance, type: 'entrance' })}
+            isSelected={selectedItem?.id === entrance.id && selectedItem?.type === 'entrance'}
           />
         ))}
-        {Array.from({ length: exits }).map((_, idx) => (
+
+        {/* Exits for current level */}
+        {currentLevelData.exits?.map((exit, idx) => (
           <EntranceExit
-            key={`exit-${idx}`}
+            key={`exit-${exit.id || idx}`}
             type="exit"
-            position={[Math.ceil(Math.sqrt(spotsPerLevel)) * 1.25, 0.5, idx * 3 - 3]}
+            position={exit.position || [10, selectedLevel * 3 + 0.5, 0]}
             rotation={[0, -Math.PI / 2, 0]}
+            onClick={() => onItemClick({ ...exit, type: 'exit' })}
+            isSelected={selectedItem?.id === exit.id && selectedItem?.type === 'exit'}
           />
         ))}
 
@@ -107,34 +119,42 @@ const GarageScene = memo(function GarageScene({
           position={[0, -0.01, 0]}
         />
 
-        {/* 3D Items (Cameras & Sensors) - Memoized for performance */}
-        {items.map((item) => {
-          if (item.type === 'camera') {
-            return (
-              <Camera3D
-                key={item.id}
-                item={item}
-                position={item.position}
-                rotation={item.rotation}
-                onClick={() => onItemClick(item)}
-                isSelected={selectedItem?.id === item.id}
-                onDrag={onItemDrag}
-              />
-            )
-          } else if (item.type === 'sensor') {
-            return (
-              <Sensor3D
-                key={item.id}
-                item={item}
-                position={item.position}
-                onClick={() => onItemClick(item)}
-                isSelected={selectedItem?.id === item.id}
-                onDrag={onItemDrag}
-              />
-            )
-          }
-          return null
-        })}
+        {/* Cameras for current level */}
+        {currentLevelData.cameras?.map((camera) => (
+          <Camera3D
+            key={camera.id}
+            item={camera}
+            position={camera.position || [0, selectedLevel * 3 + 1, 0]}
+            rotation={camera.rotation || [0, 0, 0]}
+            onClick={() => onItemClick({ ...camera, type: 'camera' })}
+            isSelected={selectedItem?.id === camera.id && selectedItem?.type === 'camera'}
+            onDrag={onItemDrag}
+          />
+        ))}
+
+        {/* Sensors for current level */}
+        {currentLevelData.sensors?.map((sensor) => (
+          <Sensor3D
+            key={sensor.id}
+            item={sensor}
+            position={sensor.position || [0, selectedLevel * 3 + 0.5, 0]}
+            onClick={() => onItemClick({ ...sensor, type: 'sensor' })}
+            isSelected={selectedItem?.id === sensor.id && selectedItem?.type === 'sensor'}
+            onDrag={onItemDrag}
+          />
+        ))}
+
+        {/* Ramps for current level */}
+        {currentLevelData.ramps?.map((ramp) => (
+          <Ramp3D
+            key={ramp.id}
+            position={ramp.position || [0, selectedLevel * 3, 0]}
+            direction={ramp.direction}
+            onClick={() => onItemClick({ ...ramp, type: `ramp-${ramp.direction}` })}
+            isSelected={selectedItem?.id === ramp.id}
+            onDrag={onItemDrag}
+          />
+        ))}
 
         {/* Axes Helper - smaller and less intrusive */}
         <axesHelper args={[3]} />
