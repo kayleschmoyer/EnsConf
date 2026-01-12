@@ -1,5 +1,4 @@
 import { useRef, useState, memo } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
 import { DragControls } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -21,13 +20,6 @@ const Camera3D = memo(function Camera3D({ item, position, rotation, onClick, isS
   }
 
   const colors = directionColors[direction] || directionColors.overview
-
-  // Only animate when selected - significant performance improvement
-  useFrame((state) => {
-    if (meshRef.current && isSelected && !isDragging) {
-      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 2) * 0.15
-    }
-  })
 
   const handleDragStart = () => {
     setIsDragging(true)
@@ -68,8 +60,6 @@ const Camera3D = memo(function Camera3D({ item, position, rotation, onClick, isS
         {/* Camera Body (Cone) - More realistic design */}
         <mesh
           ref={meshRef}
-          castShadow
-          receiveShadow
           onPointerOver={(e) => {
             e.stopPropagation()
             setHovered(true)
@@ -84,10 +74,6 @@ const Camera3D = memo(function Camera3D({ item, position, rotation, onClick, isS
           <coneGeometry args={[0.35, 0.9, 8]} />
           <meshStandardMaterial
             color={isSelected ? '#ff3366' : hovered ? colors.base : '#2c3e50'}
-            emissive={isSelected ? '#ff3366' : colors.emissive}
-            emissiveIntensity={isSelected ? 0.9 : hovered ? 0.7 : 0.4}
-            metalness={0.9}
-            roughness={0.15}
           />
         </mesh>
 
@@ -102,15 +88,9 @@ const Camera3D = memo(function Camera3D({ item, position, rotation, onClick, isS
         </mesh>
 
         {/* Camera Lens */}
-        <mesh position={[0, 0.2, 0]} castShadow>
+        <mesh position={[0, 0.2, 0]}>
           <cylinderGeometry args={[0.15, 0.15, 0.3, 16]} />
-          <meshStandardMaterial
-            color="#1a1a1a"
-            metalness={1}
-            roughness={0.1}
-            emissive="#ffffff"
-            emissiveIntensity={0.1}
-          />
+          <meshStandardMaterial color="#1a1a1a" />
         </mesh>
 
         {/* FOV Indicator - Only show when selected or hovered */}

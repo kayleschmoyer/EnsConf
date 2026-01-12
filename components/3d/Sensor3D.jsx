@@ -1,5 +1,4 @@
 import { useRef, useState, memo } from 'react'
-import { useFrame } from '@react-three/fiber'
 import { DragControls } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -21,23 +20,6 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
   }
 
   const colors = sensorColors[sensorType] || sensorColors.normal
-
-  // Only animate when selected or hovered - significant performance improvement
-  useFrame((state) => {
-    if (meshRef.current && !isDragging) {
-      // Slow rotation only when visible
-      if (isSelected || hovered) {
-        meshRef.current.rotation.y += 0.02
-      }
-      // Pulsing animation when selected
-      if (isSelected) {
-        const scale = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.12
-        meshRef.current.scale.setScalar(scale)
-      } else {
-        meshRef.current.scale.setScalar(1)
-      }
-    }
-  })
 
   const handleDragStart = () => {
     setIsDragging(true)
@@ -77,8 +59,6 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
         {/* Sensor Sphere - More realistic design */}
         <mesh
           ref={meshRef}
-          castShadow
-          receiveShadow
           onPointerOver={(e) => {
             e.stopPropagation()
             setHovered(true)
@@ -90,13 +70,9 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
             document.body.style.cursor = 'default'
           }}
         >
-          <sphereGeometry args={[0.35, 20, 20]} />
+          <sphereGeometry args={[0.35, 16, 16]} />
           <meshStandardMaterial
             color={isSelected ? '#00ff88' : hovered ? colors.base : '#34495e'}
-            emissive={isSelected ? '#00ff88' : colors.emissive}
-            emissiveIntensity={isSelected ? 0.9 : hovered ? 0.7 : 0.4}
-            metalness={0.95}
-            roughness={0.1}
           />
         </mesh>
 
@@ -126,11 +102,7 @@ const Sensor3D = memo(function Sensor3D({ item, position, onClick, isSelected, o
         {/* Type indicator label */}
         <mesh position={[0, 0.7, 0]}>
           <sphereGeometry args={[0.2, 16, 16]} />
-          <meshStandardMaterial
-            color={colors.base}
-            emissive={colors.emissive}
-            emissiveIntensity={0.8}
-          />
+          <meshStandardMaterial color={colors.base} />
         </mesh>
 
         {/* Selection Indicator */}

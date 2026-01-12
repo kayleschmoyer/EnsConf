@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { Rocket, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -65,7 +64,7 @@ export default function DeploymentsPage() {
           const StatusIcon = status.icon
 
           return (
-            <motion.div
+            <div
               key={deployment.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -104,7 +103,7 @@ export default function DeploymentsPage() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )
         })}
       </div>
