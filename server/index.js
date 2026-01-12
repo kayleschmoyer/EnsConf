@@ -49,28 +49,54 @@ mongoose
     console.log('⚠️  MongoDB connection failed, using in-memory fallback:', err.message)
   })
 
-// Garage Schema
+// Garage Schema - Per-Level Configuration
 const garageSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    levels: { type: Number, required: true },
     totalSpaces: { type: Number, required: true },
-    spotsPerLevel: { type: Number, default: 50 },
-    entrances: { type: Number, default: 1 },
-    exits: { type: Number, default: 1 },
-    cameras: [
+    levels: [
       {
-        id: String,
-        ip: String,
-        direction: String,
-        roi: [[Number]],
-        position: [Number],
-      },
-    ],
-    sensors: [
-      {
-        id: String,
-        position: [Number],
+        levelNumber: { type: Number, required: true },
+        name: { type: String, default: '' }, // e.g., "Ground Floor", "Basement"
+        spotsPerLevel: { type: Number, default: 50 },
+        cameras: [
+          {
+            id: String,
+            ip: String,
+            direction: { type: String, enum: ['inbound', 'outbound', 'overview'], default: 'overview' },
+            roi: [[Number]],
+            position: [Number], // [x, y, z]
+            rotation: [Number], // [x, y, z] rotation in radians
+          },
+        ],
+        sensors: [
+          {
+            id: String,
+            position: [Number], // [x, y, z]
+            type: { type: String, enum: ['EV', 'handicap', 'normal'], default: 'normal' },
+          },
+        ],
+        entrances: [
+          {
+            id: String,
+            position: [Number], // [x, y, z]
+            name: { type: String, default: '' },
+          },
+        ],
+        exits: [
+          {
+            id: String,
+            position: [Number], // [x, y, z]
+            name: { type: String, default: '' },
+          },
+        ],
+        ramps: [
+          {
+            id: String,
+            position: [Number], // [x, y, z]
+            direction: { type: String, enum: ['up', 'down'], required: true },
+          },
+        ],
       },
     ],
     status: {
@@ -79,7 +105,7 @@ const garageSchema = new mongoose.Schema(
       default: 'active',
     },
     occupancy: { type: Number, default: 0 },
-    version: { type: String, default: '1.0.0' },
+    version: { type: String, default: '2.0.0' }, // Bumped version for new schema
   },
   { timestamps: true }
 )
@@ -247,10 +273,8 @@ app.get('/api/garages/:id/export', async (req, res) => {
     const config = {
       garage_id: garage._id,
       name: garage.name,
-      levels: garage.levels,
       total_spaces: garage.totalSpaces,
-      cameras: garage.cameras || [],
-      sensors: garage.sensors || [],
+      levels: garage.levels || [],
       status: garage.status,
       version: garage.version,
     }

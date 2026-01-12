@@ -1,17 +1,20 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Check, Building2, Camera, FileCode, Trash2, Move } from 'lucide-react'
+import { ArrowLeft, Check, Building2, Layers, FileCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Slider } from '@/components/ui/slider'
-import { Card } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import axios from 'axios'
 import { useToast } from '@/components/ui/use-toast'
+import LevelConfiguration from '@/components/garage/LevelConfiguration'
+import ElementToolbox from '@/components/garage/ElementToolbox'
+import LevelSwitcher from '@/components/garage/LevelSwitcher'
+import ElementProperties from '@/components/garage/ElementProperties'
 
 // Dynamically import 3D scene to avoid SSR issues
 const GarageScene = dynamic(() => import('@/components/3d/GarageScene'), {
@@ -27,168 +30,199 @@ export default function NewGaragePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [step, setStep] = useState(1)
-  const [garageData, setGarageData] = useState({
-    name: '',
-    levels: 3,
-    spotsPerLevel: 50,
-    entrances: 1,
-    exits: 1,
-  })
-  const [items, setItems] = useState([])
-  const [selectedItem, setSelectedItem] = useState(null)
+  const [garageName, setGarageName] = useState('')
+  const [levelsData, setLevelsData] = useState([])
+  const [totalSpaces, setTotalSpaces] = useState(0)
   const [selectedLevel, setSelectedLevel] = useState(0)
-  const [placementMode, setPlacementMode] = useState(false)
-  const [itemForm, setItemForm] = useState({
-    type: 'camera',
-    ip: '',
-    direction: 'inbound',
-    position: [0, 0, 0],
-  })
+  const [selectedElement, setSelectedElement] = useState(null)
+  const [placementMode, setPlacementMode] = useState(null) // null or element type to place
 
   const steps = [
     { num: 1, title: 'Garage Basics', icon: Building2 },
-    { num: 2, title: '3D Builder', icon: Camera },
-    { num: 3, title: 'Review & Save', icon: FileCode },
+    { num: 2, title: 'Configure Levels', icon: Layers },
+    { num: 3, title: '3D Builder', icon: Layers },
+    { num: 4, title: 'Review & Save', icon: FileCode },
   ]
 
-  // Optimized handlers with useCallback to prevent unnecessary re-renders
-  const handleAddItem = useCallback(() => {
-    if (placementMode) {
-      toast({
-        title: 'Click on floor',
-        description: 'Click anywhere on the selected level to place the item',
-      })
-      return
-    }
+  // Step 1: Garage name
+  // Step 2: Level configuration
+  const handleLevelConfigComplete = (config) => {
+    setLevelsData(config.levels)
+    setTotalSpaces(config.totalSpaces)
+    setStep(3)
+  }
 
-    // Place at center of selected level
-    const levelY = selectedLevel * 3
-    const newItem = {
-      id: Date.now().toString(),
-      type: itemForm.type,
-      ip: itemForm.ip,
-      direction: itemForm.direction,
-      position: [0, levelY + 0.5, 0],
-      rotation: [0, 0, 0],
-      level: selectedLevel,
-    }
-
-    setItems(prev => [...prev, newItem])
-    setSelectedItem(newItem)
+  // Step 3: 3D Builder - Add element
+  const handleAddElement = (elementType) => {
+    setPlacementMode(elementType)
     toast({
-      title: 'Item Added',
-      description: `${itemForm.type === 'camera' ? 'Camera' : 'Sensor'} added to level ${selectedLevel + 1}`,
+      title: 'Placement Mode',
+      description: 'Click on the 3D canvas to place the element',
     })
-  }, [itemForm, selectedLevel, placementMode, toast])
+  }
 
+  // Handle floor click for placement
   const handleFloorClick = useCallback((position) => {
     if (!placementMode) return
 
     const levelY = selectedLevel * 3
-    const newItem = {
-      id: Date.now().toString(),
-      type: itemForm.type,
-      ip: itemForm.ip,
-      direction: itemForm.direction,
+    const newElement = {
+      id: `${placementMode}-${Date.now()}`,
       position: [position[0], levelY + 0.5, position[2]],
-      rotation: [0, 0, 0],
-      level: selectedLevel,
     }
 
-    setItems(prev => [...prev, newItem])
-    setSelectedItem(newItem)
-    setPlacementMode(false)
-    toast({
-      title: 'Item Placed',
-      description: `${itemForm.type === 'camera' ? 'Camera' : 'Sensor'} placed at (${position[0].toFixed(1)}, ${position[2].toFixed(1)})`,
-    })
-  }, [itemForm, selectedLevel, placementMode, toast])
+    // Add type-specific properties
+    if (placementMode === 'camera') {
+      newElement.ip = ''
+      newElement.direction = 'overview'
+      newElement.rotation = [0, 0, 0]
+    } else if (placementMode === 'sensor') {
+      newElement.type = 'normal'
+    } else if (placementMode === 'ramp-up' || placementMode === 'ramp-down') {
+      newElement.direction = placementMode.split('-')[1]
+    }
 
+    // Add element to the appropriate level array
+    setLevelsData((prev) => {
+      const updated = [...prev]
+      const level = { ...updated[selectedLevel] }
+
+      if (placementMode === 'camera') {
+        level.cameras = [...(level.cameras || []), newElement]
+      } else if (placementMode === 'sensor') {
+        level.sensors = [...(level.sensors || []), newElement]
+      } else if (placementMode === 'entrance') {
+        level.entrances = [...(level.entrances || []), newElement]
+      } else if (placementMode === 'exit') {
+        level.exits = [...(level.exits || []), newElement]
+      } else if (placementMode === 'ramp-up' || placementMode === 'ramp-down') {
+        level.ramps = [...(level.ramps || []), newElement]
+      }
+
+      updated[selectedLevel] = level
+      return updated
+    })
+
+    setSelectedElement({ type: placementMode, data: newElement })
+    setPlacementMode(null)
+
+    toast({
+      title: 'Element Placed',
+      description: `${placementMode} added to ${levelsData[selectedLevel]?.name || `Level ${selectedLevel + 1}`}`,
+    })
+  }, [placementMode, selectedLevel, levelsData, toast])
+
+  // Handle element click
+  const handleElementClick = (element) => {
+    setSelectedElement(element)
+    setPlacementMode(null)
+  }
+
+  // Handle element update
+  const handleUpdateElement = (updatedElement) => {
+    setLevelsData((prev) => {
+      const updated = [...prev]
+      const level = { ...updated[selectedLevel] }
+      const { type, data } = updatedElement
+
+      // Determine which array to update
+      let arrayKey = ''
+      if (type === 'camera') arrayKey = 'cameras'
+      else if (type === 'sensor') arrayKey = 'sensors'
+      else if (type === 'entrance') arrayKey = 'entrances'
+      else if (type === 'exit') arrayKey = 'exits'
+      else if (type.startsWith('ramp')) arrayKey = 'ramps'
+
+      if (arrayKey) {
+        level[arrayKey] = level[arrayKey]?.map((item) =>
+          item.id === data.id ? data : item
+        ) || []
+      }
+
+      updated[selectedLevel] = level
+      return updated
+    })
+
+    setSelectedElement(updatedElement)
+  }
+
+  // Handle element delete
+  const handleDeleteElement = () => {
+    if (!selectedElement) return
+
+    setLevelsData((prev) => {
+      const updated = [...prev]
+      const level = { ...updated[selectedLevel] }
+      const { type, data } = selectedElement
+
+      // Determine which array to update
+      let arrayKey = ''
+      if (type === 'camera') arrayKey = 'cameras'
+      else if (type === 'sensor') arrayKey = 'sensors'
+      else if (type === 'entrance') arrayKey = 'entrances'
+      else if (type === 'exit') arrayKey = 'exits'
+      else if (type.startsWith('ramp')) arrayKey = 'ramps'
+
+      if (arrayKey) {
+        level[arrayKey] = level[arrayKey]?.filter((item) => item.id !== data.id) || []
+      }
+
+      updated[selectedLevel] = level
+      return updated
+    })
+
+    toast({
+      title: 'Element Deleted',
+      description: `${selectedElement.type} removed`,
+    })
+
+    setSelectedElement(null)
+  }
+
+  // Handle element drag
   const handleItemDrag = useCallback((itemId, newPosition) => {
-    setItems(prev => prev.map(item =>
-      item.id === itemId
-        ? { ...item, position: newPosition }
-        : item
-    ))
-  }, [])
+    setLevelsData((prev) => {
+      const updated = [...prev]
+      const level = { ...updated[selectedLevel] }
 
-  const handleDeleteItem = useCallback(() => {
-    if (!selectedItem) return
+      // Update position in all arrays
+      ;['cameras', 'sensors', 'entrances', 'exits', 'ramps'].forEach((key) => {
+        if (level[key]) {
+          level[key] = level[key].map((item) =>
+            item.id === itemId ? { ...item, position: newPosition } : item
+          )
+        }
+      })
 
-    setItems(prev => prev.filter(item => item.id !== selectedItem.id))
-    toast({
-      title: 'Item Deleted',
-      description: `${selectedItem.type === 'camera' ? 'Camera' : 'Sensor'} removed`,
+      updated[selectedLevel] = level
+      return updated
     })
-    setSelectedItem(null)
-  }, [selectedItem, toast])
 
-  const handleUpdatePosition = useCallback((axis, value) => {
-    if (!selectedItem) return
+    // Update selected element if it's the one being dragged
+    if (selectedElement?.data?.id === itemId) {
+      setSelectedElement((prev) => ({
+        ...prev,
+        data: { ...prev.data, position: newPosition },
+      }))
+    }
+  }, [selectedLevel, selectedElement])
 
-    setItems(prev => prev.map(item => {
-      if (item.id === selectedItem.id) {
-        const newPosition = [...item.position]
-        const axisIndex = { x: 0, y: 1, z: 2 }[axis]
-        newPosition[axisIndex] = parseFloat(value) || 0
-        return { ...item, position: newPosition }
-      }
-      return item
-    }))
-
-    setSelectedItem(prev => {
-      if (!prev) return prev
-      const newPosition = [...prev.position]
-      const axisIndex = { x: 0, y: 1, z: 2 }[axis]
-      newPosition[axisIndex] = parseFloat(value) || 0
-      return { ...prev, position: newPosition }
-    })
-  }, [selectedItem])
-
-  const handleUpdateRotation = useCallback((value) => {
-    if (!selectedItem) return
-
-    const radians = (parseFloat(value) || 0) * (Math.PI / 180)
-    setItems(prev => prev.map(item => {
-      if (item.id === selectedItem.id) {
-        return { ...item, rotation: [0, radians, 0] }
-      }
-      return item
-    }))
-
-    setSelectedItem(prev => {
-      if (!prev) return prev
-      return { ...prev, rotation: [0, radians, 0] }
-    })
-  }, [selectedItem])
-
-  // Memoize camera and sensor counts to prevent recalculation
-  const itemCounts = useMemo(() => ({
-    cameras: items.filter(i => i.type === 'camera').length,
-    sensors: items.filter(i => i.type === 'sensor').length,
-  }), [items])
-
+  // Handle save
   const handleSave = async () => {
     try {
       const config = {
-        ...garageData,
-        cameras: items.filter(i => i.type === 'camera').map((cam, idx) => ({
-          id: `cam${idx + 1}`,
-          ip: cam.ip || `192.168.1.${100 + idx}`,
-          direction: cam.direction,
-          roi: [[100, 200], [300, 400]], // Simplified ROI
-          position: cam.position,
-        })),
-        sensors: items.filter(i => i.type === 'sensor').map((sen, idx) => ({
-          id: `sensor${idx + 1}`,
-          position: sen.position,
-        })),
+        name: garageName,
+        totalSpaces,
+        levels: levelsData,
         status: 'active',
         occupancy: 0,
-        totalSpaces: garageData.levels * garageData.spotsPerLevel,
+        version: '2.0.0',
       }
 
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/garages`, config)
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/garages`,
+        config
+      )
 
       toast({
         title: 'Success!',
@@ -205,7 +239,12 @@ export default function NewGaragePage() {
       })
       // Fallback: save to localStorage
       const localGarages = JSON.parse(localStorage.getItem('garages') || '[]')
-      localGarages.push({ ...garageData, _id: Date.now().toString(), items })
+      localGarages.push({
+        _id: Date.now().toString(),
+        name: garageName,
+        totalSpaces,
+        levels: levelsData,
+      })
       localStorage.setItem('garages', JSON.stringify(localGarages))
       router.push('/dashboard')
     }
@@ -215,22 +254,18 @@ export default function NewGaragePage() {
     <div className="min-h-screen p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          className="mb-4"
-        >
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
         <h1 className="text-4xl font-bold neon-text">Create New Garage</h1>
-        <p className="text-gray-400 mt-2">Build your garage configuration in 3D</p>
+        <p className="text-gray-400 mt-2">Configure your garage level by level</p>
       </div>
 
       {/* Progress Steps */}
-      <div className="flex items-center justify-center mb-8 gap-4">
+      <div className="flex items-center justify-center mb-8 gap-4 overflow-x-auto">
         {steps.map((s, idx) => (
-          <div key={s.num} className="flex items-center">
+          <div key={s.num} className="flex items-center flex-shrink-0">
             <motion.div
               animate={{
                 scale: step === s.num ? 1.1 : 1,
@@ -256,15 +291,14 @@ export default function NewGaragePage() {
                 <p className="text-sm font-semibold">{s.title}</p>
               </div>
             </motion.div>
-            {idx < steps.length - 1 && (
-              <div className="w-12 h-0.5 bg-white/20 mx-2" />
-            )}
+            {idx < steps.length - 1 && <div className="w-12 h-0.5 bg-white/20 mx-2" />}
           </div>
         ))}
       </div>
 
       {/* Step Content */}
       <AnimatePresence mode="wait">
+        {/* Step 1: Garage Name */}
         {step === 1 && (
           <motion.div
             key="step1"
@@ -273,269 +307,52 @@ export default function NewGaragePage() {
             exit={{ opacity: 0, x: -20 }}
           >
             <Card className="max-w-2xl mx-auto p-8">
-              <h2 className="text-2xl font-bold mb-6">Garage Information</h2>
+              <h2 className="text-2xl font-bold mb-6">Garage Name</h2>
               <div className="space-y-6">
                 <div>
-                  <Label>Garage Name</Label>
+                  <Label htmlFor="garage-name">Name</Label>
                   <Input
-                    value={garageData.name}
-                    onChange={(e) =>
-                      setGarageData({ ...garageData, name: e.target.value })
-                    }
-                    placeholder="e.g., Downtown Parking"
+                    id="garage-name"
+                    value={garageName}
+                    onChange={(e) => setGarageName(e.target.value)}
+                    placeholder="e.g., Downtown Parking Garage"
                     className="mt-2"
                   />
                 </div>
 
-                <div>
-                  <Label>Number of Levels: {garageData.levels}</Label>
-                  <Slider
-                    value={[garageData.levels]}
-                    onValueChange={(v) =>
-                      setGarageData({ ...garageData, levels: v[0] })
-                    }
-                    min={1}
-                    max={10}
-                    step={1}
-                    className="mt-2"
-                  />
-                </div>
-
-                <div>
-                  <Label>Spots per Level</Label>
-                  <Input
-                    type="number"
-                    value={garageData.spotsPerLevel}
-                    onChange={(e) =>
-                      setGarageData({
-                        ...garageData,
-                        spotsPerLevel: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="mt-2"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Entrances</Label>
-                    <Input
-                      type="number"
-                      value={garageData.entrances}
-                      onChange={(e) =>
-                        setGarageData({
-                          ...garageData,
-                          entrances: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="mt-2"
-                    />
-                  </div>
-                  <div>
-                    <Label>Exits</Label>
-                    <Input
-                      type="number"
-                      value={garageData.exits}
-                      onChange={(e) =>
-                        setGarageData({
-                          ...garageData,
-                          exits: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="mt-2"
-                    />
-                  </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setStep(2)}
+                    disabled={!garageName.trim()}
+                    className="gap-2"
+                  >
+                    Continue
+                    <ArrowLeft className="w-4 h-4 rotate-180" />
+                  </Button>
                 </div>
               </div>
             </Card>
           </motion.div>
         )}
 
+        {/* Step 2: Level Configuration */}
         {step === 2 && (
           <motion.div
             key="step2"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="grid lg:grid-cols-3 gap-6"
           >
-            {/* 3D Scene */}
-            <div className="lg:col-span-2 h-[700px]">
-              <Card className="h-full p-4">
-                {/* Level Selector */}
-                <div className="mb-3 flex items-center gap-2 flex-wrap">
-                  <Label className="text-sm font-semibold">Select Level:</Label>
-                  {Array.from({ length: garageData.levels }).map((_, idx) => (
-                    <Button
-                      key={idx}
-                      size="sm"
-                      variant={selectedLevel === idx ? 'neon' : 'outline'}
-                      onClick={() => setSelectedLevel(idx)}
-                      className="h-8 px-3"
-                    >
-                      Level {idx + 1}
-                    </Button>
-                  ))}
-                </div>
-
-                <GarageScene
-                  levels={garageData.levels}
-                  spotsPerLevel={garageData.spotsPerLevel}
-                  items={items}
-                  entrances={garageData.entrances}
-                  exits={garageData.exits}
-                  selectedLevel={selectedLevel}
-                  onItemClick={setSelectedItem}
-                  selectedItem={selectedItem}
-                  onItemDrag={handleItemDrag}
-                  onFloorClick={handleFloorClick}
-                  placementMode={placementMode}
-                />
-              </Card>
-            </div>
-
-            {/* Controls */}
-            <div className="space-y-4">
-              <Card className="p-6">
-                <h3 className="text-xl font-bold mb-4">Add Items</h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Type</Label>
-                    <select
-                      value={itemForm.type}
-                      onChange={(e) =>
-                        setItemForm({ ...itemForm, type: e.target.value })
-                      }
-                      className="w-full mt-2 p-2 rounded-md bg-background border border-input"
-                    >
-                      <option value="camera">Camera</option>
-                      <option value="sensor">Sensor</option>
-                    </select>
-                  </div>
-
-                  {itemForm.type === 'camera' && (
-                    <>
-                      <div>
-                        <Label>IP Address</Label>
-                        <Input
-                          value={itemForm.ip}
-                          onChange={(e) =>
-                            setItemForm({ ...itemForm, ip: e.target.value })
-                          }
-                          placeholder="192.168.1.100"
-                          className="mt-2"
-                        />
-                      </div>
-                      <div>
-                        <Label>Direction</Label>
-                        <select
-                          value={itemForm.direction}
-                          onChange={(e) =>
-                            setItemForm({
-                              ...itemForm,
-                              direction: e.target.value,
-                            })
-                          }
-                          className="w-full mt-2 p-2 rounded-md bg-background border border-input"
-                        >
-                          <option value="inbound">Inbound</option>
-                          <option value="outbound">Outbound</option>
-                          <option value="overview">Overview</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant={placementMode ? 'neon' : 'outline'}
-                      onClick={() => setPlacementMode(!placementMode)}
-                      className="flex-1"
-                    >
-                      <Move className="w-4 h-4 mr-2" />
-                      {placementMode ? 'Placing...' : 'Click to Place'}
-                    </Button>
-                    <Button variant="neon" onClick={handleAddItem} className="flex-1">
-                      Add at Center
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-
-              {selectedItem && (
-                <Card className="p-6 border-2 border-neon-blue">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold">
-                      {selectedItem.type === 'camera' ? 'Camera' : 'Sensor'} Settings
-                    </h3>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={handleDeleteItem}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-xs">Position X</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={selectedItem.position[0].toFixed(2)}
-                        onChange={(e) => handleUpdatePosition('x', e.target.value)}
-                        className="mt-1 h-8"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Position Y (Height)</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={selectedItem.position[1].toFixed(2)}
-                        onChange={(e) => handleUpdatePosition('y', e.target.value)}
-                        className="mt-1 h-8"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Position Z</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={selectedItem.position[2].toFixed(2)}
-                        onChange={(e) => handleUpdatePosition('z', e.target.value)}
-                        className="mt-1 h-8"
-                      />
-                    </div>
-                    {selectedItem.type === 'camera' && (
-                      <div>
-                        <Label className="text-xs">Rotation (degrees)</Label>
-                        <Input
-                          type="number"
-                          step="5"
-                          value={Math.round(selectedItem.rotation[1] * (180 / Math.PI))}
-                          onChange={(e) => handleUpdateRotation(e.target.value)}
-                          className="mt-1 h-8"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              )}
-
-              <Card className="p-6">
-                <h3 className="text-lg font-bold mb-2">Items Added</h3>
-                <p className="text-sm text-gray-400">
-                  Cameras: {itemCounts.cameras}
-                  <br />
-                  Sensors: {itemCounts.sensors}
-                </p>
-              </Card>
+            <div className="max-w-5xl mx-auto">
+              <LevelConfiguration
+                onComplete={handleLevelConfigComplete}
+                initialData={{ levels: levelsData }}
+              />
             </div>
           </motion.div>
         )}
 
+        {/* Step 3: 3D Builder */}
         {step === 3 && (
           <motion.div
             key="step3"
@@ -543,59 +360,159 @@ export default function NewGaragePage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <Card className="max-w-2xl mx-auto p-8">
-              <h2 className="text-2xl font-bold mb-6">Review Configuration</h2>
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between py-2 border-b border-white/10">
-                  <span className="text-gray-400">Garage Name</span>
-                  <span className="font-semibold">{garageData.name}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/10">
-                  <span className="text-gray-400">Levels</span>
-                  <span className="font-semibold">{garageData.levels}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/10">
-                  <span className="text-gray-400">Total Spaces</span>
-                  <span className="font-semibold">
-                    {garageData.levels * garageData.spotsPerLevel}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/10">
-                  <span className="text-gray-400">Cameras</span>
-                  <span className="font-semibold">
-                    {items.filter((i) => i.type === 'camera').length}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/10">
-                  <span className="text-gray-400">Sensors</span>
-                  <span className="font-semibold">
-                    {items.filter((i) => i.type === 'sensor').length}
-                  </span>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Left Sidebar - Level Switcher */}
+              <div className="space-y-6">
+                <LevelSwitcher
+                  levels={levelsData}
+                  selectedLevel={selectedLevel}
+                  onLevelChange={setSelectedLevel}
+                />
+
+                <ElementToolbox
+                  onAddElement={handleAddElement}
+                  selectedElement={placementMode}
+                />
+              </div>
+
+              {/* Center - 3D Scene */}
+              <div className="lg:col-span-2">
+                <Card className="p-0 overflow-hidden">
+                  <div className="h-[600px]">
+                    <GarageScene
+                      levelsData={levelsData}
+                      selectedLevel={selectedLevel}
+                      onItemClick={handleElementClick}
+                      selectedItem={selectedElement?.data}
+                      onItemDrag={handleItemDrag}
+                      onFloorClick={handleFloorClick}
+                      placementMode={!!placementMode}
+                    />
+                  </div>
+                </Card>
+
+                <div className="flex justify-between mt-6">
+                  <Button variant="outline" onClick={() => setStep(2)}>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button onClick={() => setStep(4)} className="gap-2">
+                    Continue
+                    <ArrowLeft className="w-4 h-4 rotate-180" />
+                  </Button>
                 </div>
               </div>
-              <Button variant="neon" onClick={handleSave} className="w-full">
-                Create Garage
-              </Button>
+
+              {/* Right Sidebar - Element Properties */}
+              <div>
+                <ElementProperties
+                  selectedElement={selectedElement}
+                  onUpdateElement={handleUpdateElement}
+                  onDeleteElement={handleDeleteElement}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 4: Review & Save */}
+        {step === 4 && (
+          <motion.div
+            key="step4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+          >
+            <Card className="max-w-4xl mx-auto p-8">
+              <h2 className="text-2xl font-bold mb-6">Review Configuration</h2>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-semibold text-lg mb-2">Garage Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Name:</span>{' '}
+                      <span className="font-medium">{garageName}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total Spaces:</span>{' '}
+                      <span className="font-medium">{totalSpaces}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Levels:</span>{' '}
+                      <span className="font-medium">{levelsData.length}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Level Summary */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">Level Summary</h3>
+                  <div className="space-y-3">
+                    {levelsData.map((level, idx) => (
+                      <Card key={idx} className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold">
+                              {level.name || `Level ${idx + 1}`}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {level.spotsPerLevel} parking spots
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Cameras:</span>{' '}
+                              <span className="font-medium">
+                                {level.cameras?.length || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Sensors:</span>{' '}
+                              <span className="font-medium">
+                                {level.sensors?.length || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Entrances:</span>{' '}
+                              <span className="font-medium">
+                                {level.entrances?.length || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Exits:</span>{' '}
+                              <span className="font-medium">
+                                {level.exits?.length || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Ramps:</span>{' '}
+                              <span className="font-medium">
+                                {level.ramps?.length || 0}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-6">
+                  <Button variant="outline" onClick={() => setStep(3)}>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Builder
+                  </Button>
+                  <Button onClick={handleSave} size="lg" className="gap-2">
+                    <Check className="w-5 h-5" />
+                    Create Garage
+                  </Button>
+                </div>
+              </div>
             </Card>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Navigation */}
-      <div className="flex justify-center gap-4 mt-8">
-        {step > 1 && (
-          <Button variant="outline" onClick={() => setStep(step - 1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-        )}
-        {step < 3 && (
-          <Button variant="neon" onClick={() => setStep(step + 1)}>
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        )}
-      </div>
     </div>
   )
 }
