@@ -5,14 +5,12 @@ import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import GarageCard from '@/components/GarageCard'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import axios from 'axios'
 
 export default function GaragesPage() {
   const [garages, setGarages] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
-  const router = useRouter()
-
   useEffect(() => {
     fetchGarages()
   }, [])
@@ -34,7 +32,7 @@ export default function GaragesPage() {
     <div className="p-6 lg:p-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold neon-text mb-2">All Garages</h1>
-        <p className="text-gray-400">Manage your garage configurations</p>
+        <p className="text-slate-400">Manage your garage configurations</p>
       </div>
 
       <div className="mb-6 flex gap-4">
@@ -44,9 +42,11 @@ export default function GaragesPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-xs"
         />
-        <Button variant="neon" onClick={() => router.push('/dashboard/garages/new')}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Garage
+        <Button variant="neon" asChild>
+          <Link href="/dashboard/garages/new">
+            <Plus className="w-4 h-4 mr-2" />
+            New Garage
+          </Link>
         </Button>
       </div>
 

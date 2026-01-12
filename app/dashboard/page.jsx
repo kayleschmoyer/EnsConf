@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { Building2, Camera, Activity, TrendingUp, Plus } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import GarageCard from '@/components/GarageCard'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import axios from 'axios'
 
 export default function DashboardPage() {
@@ -18,8 +18,6 @@ export default function DashboardPage() {
     activeDeployments: 0,
     utilization: 0,
   })
-  const router = useRouter()
-
   useEffect(() => {
     fetchGarages()
   }, [])
@@ -103,25 +101,23 @@ export default function DashboardPage() {
     <div className="p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">
-          Dashboard
-        </h1>
-        <p className="text-gray-400">Manage your garage configurations</p>
+        <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
+        <p className="text-slate-400">Manage your garage configurations</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat) => (
           <div key={stat.label}>
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-slate-900/80 border border-slate-800/70">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">{stat.label}</p>
+                    <p className="text-sm text-slate-400 mb-1">{stat.label}</p>
                     <p className="text-3xl font-bold">{stat.value}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-gray-700">
-                    <stat.icon className="w-8 h-8 text-blue-400" />
+                  <div className="p-3 rounded-lg bg-slate-800/80">
+                    <stat.icon className="w-8 h-8 text-sky-300" />
                   </div>
                 </div>
               </CardContent>
@@ -140,13 +136,11 @@ export default function DashboardPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="max-w-xs"
           />
-          <Button
-            variant="neon"
-            onClick={() => router.push('/dashboard/garages/new')}
-            className="whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Garage
+          <Button variant="neon" className="whitespace-nowrap" asChild>
+            <Link href="/dashboard/garages/new">
+              <Plus className="w-4 h-4 mr-2" />
+              New Garage
+            </Link>
           </Button>
         </div>
       </div>
@@ -162,10 +156,10 @@ export default function DashboardPage() {
 
       {filteredGarages.length === 0 && (
         <div className="text-center py-12">
-          <Building2 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 mb-4">No garages found</p>
-          <Button variant="neon" onClick={() => router.push('/dashboard/garages/new')}>
-            Create Your First Garage
+          <Building2 className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-400 mb-4">No garages found</p>
+          <Button variant="neon" asChild>
+            <Link href="/dashboard/garages/new">Create Your First Garage</Link>
           </Button>
         </div>
       )}
