@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Grid, PerspectiveCamera, Environment } from '@react-three/drei'
+import { OrbitControls, Grid, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import Camera3D from './Camera3D'
 import Sensor3D from './Sensor3D'
@@ -31,7 +31,7 @@ const GarageScene = memo(function GarageScene({
   }
   return (
     <div className="w-full h-full bg-gradient-to-b from-gray-900 to-black rounded-lg overflow-hidden">
-      <Canvas shadows dpr={[1, 2]}>
+      <Canvas dpr={[1, 1]}>
         <PerspectiveCamera makeDefault position={[25, 20, 25]} fov={50} />
         <OrbitControls
           enablePan={true}
@@ -40,32 +40,11 @@ const GarageScene = memo(function GarageScene({
           maxPolarAngle={Math.PI / 2.2}
           minDistance={15}
           maxDistance={60}
-          dampingFactor={0.05}
-          enableDamping={true}
         />
 
-        {/* Optimized Lighting */}
-        <ambientLight intensity={0.6} />
-        <directionalLight
-          position={[15, 20, 10]}
-          intensity={1.2}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-          shadow-camera-far={50}
-          shadow-camera-left={-20}
-          shadow-camera-right={20}
-          shadow-camera-top={20}
-          shadow-camera-bottom={-20}
-        />
-        <pointLight position={[-15, 15, -15]} intensity={0.4} color="#00d4ff" />
-        <pointLight position={[15, 15, 15]} intensity={0.4} color="#7b2cbf" />
-
-        {/* Atmospheric fog */}
-        <fog attach="fog" args={['#0a0a0a', 30, 70]} />
-
-        {/* Environment for better reflections */}
-        <Environment preset="night" />
+        {/* Simple Lighting */}
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[15, 20, 10]} intensity={0.8} />
 
         {/* Garage Floors with highlighting for selected level */}
         {levelsData.map((levelData, idx) => (
@@ -104,18 +83,13 @@ const GarageScene = memo(function GarageScene({
           />
         ))}
 
-        {/* Enhanced Grid */}
+        {/* Simple Grid */}
         <Grid
           args={[60, 60]}
           cellSize={1}
-          cellThickness={0.6}
-          cellColor="#00d4ff"
+          cellColor="#333333"
           sectionSize={5}
-          sectionThickness={1.5}
-          sectionColor="#7b2cbf"
-          fadeDistance={50}
-          fadeStrength={1}
-          followCamera={false}
+          sectionColor="#555555"
           position={[0, -0.01, 0]}
         />
 

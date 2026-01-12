@@ -1,20 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowLeft, Download, Upload, Save, Github } from 'lucide-react'
+import { ArrowLeft, Download, Save, Github } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import axios from 'axios'
 import yaml from 'yaml'
 import { useToast } from '@/components/ui/use-toast'
-
-const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
-  ssr: false,
-  loading: () => <p>Loading editor...</p>,
-})
 
 export default function ConfigEditorPage({ params }) {
   const router = useRouter()
@@ -145,21 +138,13 @@ export default function ConfigEditorPage({ params }) {
         </div>
       </div>
 
-      <Card className="p-4 h-[calc(100vh-250px)]">
-        <MonacoEditor
-          height="100%"
-          language={language}
+      <Card className="p-0 h-[calc(100vh-250px)]">
+        <textarea
           value={code}
-          onChange={(value) => setCode(value || '')}
-          theme="vs-dark"
-          options={{
-            minimap: { enabled: true },
-            fontSize: 14,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-          }}
+          onChange={(e) => setCode(e.target.value)}
+          className="w-full h-full p-4 bg-gray-900 text-gray-100 font-mono text-sm resize-none focus:outline-none rounded-lg"
+          spellCheck="false"
+          style={{ tabSize: 2 }}
         />
       </Card>
     </div>

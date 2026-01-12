@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import { Building2, Camera, Activity, TrendingUp, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -104,39 +103,30 @@ export default function DashboardPage() {
     <div className="p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-4xl font-bold mb-2 neon-text"
-        >
+        <h1 className="text-4xl font-bold mb-2">
           Dashboard
-        </motion.h1>
+        </h1>
         <p className="text-gray-400">Manage your garage configurations</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statCards.map((stat, idx) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-          >
-            <Card className="hologram">
+        {statCards.map((stat) => (
+          <div key={stat.label}>
+            <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-400 mb-1">{stat.label}</p>
                     <p className="text-3xl font-bold">{stat.value}</p>
                   </div>
-                  <div className={`p-3 rounded-lg bg-gradient-to-br from-${stat.color}/20 to-${stat.color}/10`}>
-                    <stat.icon className={`w-8 h-8 text-${stat.color}`} />
+                  <div className="p-3 rounded-lg bg-gray-700">
+                    <stat.icon className="w-8 h-8 text-blue-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
 
@@ -163,15 +153,10 @@ export default function DashboardPage() {
 
       {/* Garage Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredGarages.map((garage, idx) => (
-          <motion.div
-            key={garage._id}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: idx * 0.1 }}
-          >
+        {filteredGarages.map((garage) => (
+          <div key={garage._id}>
             <GarageCard garage={garage} />
-          </motion.div>
+          </div>
         ))}
       </div>
 

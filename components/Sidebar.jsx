@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import {
   Building2,
   FileCode,
@@ -11,8 +10,7 @@ import {
   Menu,
   X,
   Home,
-  Settings,
-  LogOut
+  Settings
 } from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
 
@@ -33,27 +31,25 @@ export default function Sidebar() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 glass-panel neon-border rounded-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 border border-gray-700 rounded-lg"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {/* Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{
-          x: isOpen ? 0 : -280,
-        }}
-        className="fixed left-0 top-0 h-screen w-64 glass-panel border-r border-white/10 z-40 flex flex-col"
+      <aside
+        className={`fixed left-0 top-0 h-screen w-64 bg-gray-900 border-r border-gray-800 z-40 flex flex-col transition-transform ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-white/10">
+        <div className="p-6 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-neon-blue/20 to-neon-purple/20">
-              <Building2 className="w-6 h-6 text-neon-blue" />
+            <div className="p-2 rounded-lg bg-gray-800">
+              <Building2 className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <h1 className="font-bold text-lg neon-text">GARAGE</h1>
+              <h1 className="font-bold text-lg">GARAGE</h1>
               <p className="text-xs text-gray-400">Config System</p>
             </div>
           </div>
@@ -67,17 +63,16 @@ export default function Sidebar() {
 
             return (
               <Link key={item.href} href={item.href}>
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                <div
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 neon-border'
-                      : 'hover:bg-white/5'
+                      ? 'bg-blue-600/20 border border-blue-500/50'
+                      : 'hover:bg-gray-800'
                   }`}
                 >
                   <Icon
                     className={`w-5 h-5 ${
-                      isActive ? 'text-neon-blue' : 'text-gray-400'
+                      isActive ? 'text-blue-400' : 'text-gray-400'
                     }`}
                   />
                   <span
@@ -87,14 +82,14 @@ export default function Sidebar() {
                   >
                     {item.label}
                   </span>
-                </motion.div>
+                </div>
               </Link>
             )
           })}
         </nav>
 
         {/* User Profile */}
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-gray-800">
           <div className="flex items-center gap-3 px-4 py-3">
             <UserButton afterSignOutUrl="/" />
             <div className="flex-1">
@@ -103,7 +98,7 @@ export default function Sidebar() {
             </div>
           </div>
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Spacer for main content */}
       <div className={`${isOpen ? 'lg:ml-64' : ''} transition-all`} />
