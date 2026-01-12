@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Check, Building2, Layers, FileCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -265,7 +266,7 @@ export default function NewGaragePage() {
       <div className="flex items-center justify-center mb-8 gap-4 overflow-x-auto">
         {steps.map((s, idx) => (
           <div key={s.num} className="flex items-center flex-shrink-0">
-            <div
+            <motion.div
               animate={{
                 scale: step === s.num ? 1.1 : 1,
               }}
@@ -289,7 +290,7 @@ export default function NewGaragePage() {
               <div>
                 <p className="text-sm font-semibold">{s.title}</p>
               </div>
-            </div>
+            </motion.div>
             {idx < steps.length - 1 && <div className="w-12 h-0.5 bg-white/20 mx-2" />}
           </div>
         ))}
@@ -299,7 +300,7 @@ export default function NewGaragePage() {
       <AnimatePresence mode="wait">
         {/* Step 1: Garage Name */}
         {step === 1 && (
-          <div
+          <motion.div
             key="step1"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -331,12 +332,12 @@ export default function NewGaragePage() {
                 </div>
               </div>
             </Card>
-          </div>
+          </motion.div>
         )}
 
         {/* Step 2: Level Configuration */}
         {step === 2 && (
-          <div
+          <motion.div
             key="step2"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -348,12 +349,12 @@ export default function NewGaragePage() {
                 initialData={{ levels: levelsData }}
               />
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Step 3: 3D Builder */}
         {step === 3 && (
-          <div
+          <motion.div
             key="step3"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -411,12 +412,12 @@ export default function NewGaragePage() {
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Step 4: Review & Save */}
         {step === 4 && (
-          <div
+          <motion.div
             key="step4"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -509,7 +510,7 @@ export default function NewGaragePage() {
                 </div>
               </div>
             </Card>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
